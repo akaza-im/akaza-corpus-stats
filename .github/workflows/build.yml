@@ -1,0 +1,57 @@
+name: Build corpus stats
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-v1
+
+    # Phase 1: CirrusSearch ダンプのダウンロードと抽出
+    - run: make work/jawiki/extracted/_SUCCESS
+    # ディスク容量節約のため json.gz を削除
+    - run: rm work/jawiki/jawiki-cirrussearch-content.json.gz
+
+    # Phase 2: ビルドツールのインストール
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install libmarisa-dev clang libibus-1.0-dev unzip wget zstd
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Install romkan
+      run: |
+        git clone https://github.com/akaza-im/akaza.git
+        cd akaza
+        sudo make install-resources
+    - run: cargo install --git https://github.com/akaza-im/akaza.git akaza-data
+
+    # Phase 3: トーカナイズ → 統計データ生成
+    - run: make -o work/jawiki/jawiki-cirrussearch-content.json.gz dist
+
+    # Phase 4: リリース
+    - name: Create release tarball
+      run: |
+        tar czvf akaza-corpus-stats.tar.gz -C dist .
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        files: akaza-corpus-stats.tar.gz
+        generate_release_notes: true
