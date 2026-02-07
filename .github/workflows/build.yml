@@ -7,6 +7,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,6 +17,24 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: true
+        fetch-depth: 0
+
+    # workflow_dispatch の場合は CalVer タグを生成
+    - name: Generate CalVer tag
+      if: github.event_name == 'workflow_dispatch'
+      id: calver
+      run: |
+        PREFIX="v$(date +%Y.%m%d)"
+        EXISTING=$(git tag -l "${PREFIX}.*" | sort -t. -k3 -n | tail -1)
+        if [ -z "$EXISTING" ]; then
+          TAG="${PREFIX}.0"
+        else
+          PATCH=$(echo "$EXISTING" | rev | cut -d. -f1 | rev)
+          TAG="${PREFIX}.$((PATCH + 1))"
+        fi
+        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+        echo "Generated tag: $TAG"
+
     - uses: actions/cache@v4
       with:
         path: |
@@ -44,14 +63,22 @@ jobs:
     # Phase 3: トーカナイズ → 統計データ生成
     - run: make -o work/jawiki/jawiki-cirrussearch-content.json.gz dist
 
-    # Phase 4: リリース
+    # Phase 4: タグ作成 & リリース
+    - name: Create and push tag
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        git tag ${{ steps.calver.outputs.tag }}
+        git push origin ${{ steps.calver.outputs.tag }}
+
     - name: Create release tarball
       run: |
         tar czvf akaza-corpus-stats.tar.gz -C dist .
+
     - name: Release
       uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
+        tag_name: ${{ github.event_name == 'workflow_dispatch' && steps.calver.outputs.tag || github.ref_name }}
         files: akaza-corpus-stats.tar.gz
         generate_release_notes: true
