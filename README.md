@@ -64,7 +64,11 @@ Wikipedia 由来のデータを含むため、生成物の再配布には CC BY-
 
 ## リリース
 
-CalVer (`YYYY.MMDD.PATCH`) 形式。`v*` タグの push で GitHub Actions が成果物を tarball として GitHub Release に添付します。
+CalVer (`YYYY.MMDD.PATCH`) 形式。GitHub Actions の **Actions → Create release tag → Run workflow** を実行すると、CalVer タグが自動生成・push され、ビルド → Release への tarball 添付まで自動で行われます。
+
+同日に複数回実行すると PATCH が自動インクリメントされます (`v2026.0207.0` → `v2026.0207.1` → ...)。
+
+手動でタグを打つ場合:
 
 ```bash
 git tag v2026.0207.0
