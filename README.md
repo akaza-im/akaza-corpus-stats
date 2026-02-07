@@ -64,13 +64,25 @@ Wikipedia 由来のデータを含むため、生成物の再配布には CC BY-
 
 ## リリース
 
-CalVer (`YYYY.MMDD.PATCH`) 形式。GitHub Actions の **Actions → Create release tag → Run workflow** を実行すると、CalVer タグが自動生成・push され、ビルド → Release への tarball 添付まで自動で行われます。
+データ量が大きいため CI ではビルドせず、ローカルでビルドして GitHub Release にアップロードする運用です。
 
-同日に複数回実行すると PATCH が自動インクリメントされます (`v2026.0207.0` → `v2026.0207.1` → ...)。
-
-手動でタグを打つ場合:
+### 更新手順
 
 ```bash
-git tag v2026.0207.0
-git push origin v2026.0207.0
+# 1. submodule を最新に更新
+git submodule update --init
+
+# 2. フルビルド (初回は Wikipedia ダンプのダウンロードに時間がかかる)
+make dist
+
+# 3. CalVer タグを自動生成し、GitHub Release を作成
+#    gh CLI (https://cli.github.com/) が必要
+make release
 ```
+
+`make release` は以下を自動で行います:
+1. `dist/` に成果物を生成 (未ビルドなら自動でビルド)
+2. CalVer タグ (`vYYYY.MMDD.PATCH`) を生成・push
+3. tarball を作成して GitHub Release にアップロード
+
+同日に複数回実行すると PATCH が自動インクリメントされます (`v2026.0207.0` → `v2026.0207.1` → ...)。

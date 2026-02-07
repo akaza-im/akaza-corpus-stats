@@ -51,9 +51,8 @@ wfreq の計算に corpus/ は含めない（akaza-default-model 側の corpus �
 
 ## Release
 
-CalVer (`YYYY.MMDD.PATCH`)。`v*` タグ push で GitHub Actions が tarball を Release に添付。
+CalVer (`YYYY.MMDD.PATCH`)。ローカルビルド + `gh` でリリース。
 
 ```bash
-git tag v2026.0207.0
-git push origin v2026.0207.0
+make release   # dist ビルド → CalVer タグ生成 → gh release create
 ```

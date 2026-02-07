@@ -15,6 +15,28 @@ dist: all
 	cp NOTICE dist/
 
 # =========================================================================
+#  release: CalVer タグ作成 + GitHub Release にアップロード
+# =========================================================================
+
+release: dist
+	@PREFIX="v$$(date +%Y.%m%d)"; \
+	EXISTING=$$(git tag -l "$${PREFIX}.*" | sort -t. -k3 -n | tail -1); \
+	if [ -z "$$EXISTING" ]; then \
+		TAG="$${PREFIX}.0"; \
+	else \
+		PATCH=$$(echo "$$EXISTING" | rev | cut -d. -f1 | rev); \
+		TAG="$${PREFIX}.$$((PATCH + 1))"; \
+	fi; \
+	echo "Creating release $$TAG ..."; \
+	tar czvf akaza-corpus-stats.tar.gz -C dist . && \
+	git tag "$$TAG" && \
+	git push origin "$$TAG" && \
+	gh release create "$$TAG" akaza-corpus-stats.tar.gz \
+		--title "$$TAG" --generate-notes && \
+	rm -f akaza-corpus-stats.tar.gz && \
+	echo "Released $$TAG"
+
+# =========================================================================
 #  Wikipedia (CirrusSearch ダンプ)
 # =========================================================================
 
@@ -92,4 +114,4 @@ work/stats-vibrato-bigram.wordcnt.trie: work/stats-vibrato-unigram.wordcnt.trie 
 clean:
 	rm -rf dist/
 
-.PHONY: all dist clean
+.PHONY: all dist release clean
