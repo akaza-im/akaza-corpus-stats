@@ -42,7 +42,7 @@ release: dist
 
 work/jawiki/jawiki-cirrussearch-content.json.gz:
 	mkdir -p work/jawiki/
-	wget --no-verbose --no-clobber -O work/jawiki/jawiki-cirrussearch-content.json.gz \
+	wget --show-progress --no-clobber -O work/jawiki/jawiki-cirrussearch-content.json.gz \
 		https://dumps.wikimedia.org/other/cirrussearch/$(CIRRUS_DATE)/jawiki-$(CIRRUS_DATE)-cirrussearch-content.json.gz
 
 work/jawiki/extracted/_SUCCESS: work/jawiki/jawiki-cirrussearch-content.json.gz
@@ -55,7 +55,7 @@ work/jawiki/extracted/_SUCCESS: work/jawiki/jawiki-cirrussearch-content.json.gz
 
 work/vibrato/ipadic-mecab-2_7_0.tar.xz:
 	mkdir -p work/vibrato/
-	wget --no-verbose --no-clobber -O work/vibrato/ipadic-mecab-2_7_0.tar.xz \
+	wget --show-progress --no-clobber -O work/vibrato/ipadic-mecab-2_7_0.tar.xz \
 		https://github.com/daac-tools/vibrato/releases/download/v0.5.0/ipadic-mecab-2_7_0.tar.xz
 
 work/vibrato/ipadic-mecab-2_7_0/system.dic: work/vibrato/ipadic-mecab-2_7_0.tar.xz
@@ -104,6 +104,7 @@ work/stats-vibrato-unigram.wordcnt.trie: work/vibrato-ipadic.wfreq
 		work/stats-vibrato-unigram.wordcnt.trie
 
 work/stats-vibrato-bigram.wordcnt.trie: work/stats-vibrato-unigram.wordcnt.trie work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS
+	mkdir -p work/dump/
 	akaza-data wordcnt-bigram --threshold=3 \
 		--corpus-dirs work/jawiki/vibrato-ipadic/ \
 		--corpus-dirs work/aozora_bunko/vibrato-ipadic/ \
