@@ -115,4 +115,11 @@ work/stats-vibrato-bigram.wordcnt.trie: work/stats-vibrato-unigram.wordcnt.trie 
 clean:
 	rm -rf dist/
 
-.PHONY: all dist release clean
+# akaza-data が生成したファイル (tokenize 以降) を削除。Wikipedia 抽出結果は残す。
+clean-tokenized:
+	rm -rf work/jawiki/vibrato-ipadic/ work/aozora_bunko/vibrato-ipadic/ \
+		work/vibrato-ipadic.wfreq work/vibrato-ipadic.vocab \
+		work/stats-vibrato-unigram.wordcnt.trie work/stats-vibrato-bigram.wordcnt.trie \
+		dist/
+
+.PHONY: all dist release clean clean-tokenized
