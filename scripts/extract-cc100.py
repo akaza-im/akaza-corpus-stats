@@ -26,11 +26,14 @@ from collections import Counter
 # Maximum number of documents per output file
 ARTICLES_PER_FILE = 1000
 
-# Translation table to remove ASCII control characters (0x00-0x1F) except
-# TAB (0x09), LF (0x0A), CR (0x0D).  CC-100 source text occasionally
-# contains stray control bytes that corrupt downstream tokenisation.
+# Translation table to remove unwanted characters:
+# - ASCII control characters (0x00-0x1F) except TAB, LF, CR
+# - Private Use Area (U+E000-F8FF): icon font codepoints (Font Awesome etc.)
+# - Specials (U+FFF0-FFFF): replacement chars, noncharacters
 _CONTROL_CHAR_TABLE = str.maketrans("", "", "".join(
-    chr(c) for c in range(0x20) if c not in (0x09, 0x0A, 0x0D)
+    [chr(c) for c in range(0x20) if c not in (0x09, 0x0A, 0x0D)]
+    + [chr(c) for c in range(0xE000, 0xF900)]
+    + [chr(c) for c in range(0xFFF0, 0x10000)]
 ))
 
 # --- Filters ---
