@@ -20,7 +20,9 @@ Output directory structure mirrors wikiextractor:
 import argparse
 import lzma
 import os
+import re
 import sys
+import unicodedata
 from collections import Counter
 
 # Maximum number of documents per output file
@@ -30,11 +32,23 @@ ARTICLES_PER_FILE = 1000
 # - ASCII control characters (0x00-0x1F) except TAB, LF, CR
 # - Private Use Area (U+E000-F8FF): icon font codepoints (Font Awesome etc.)
 # - Specials (U+FFF0-FFFF): replacement chars, noncharacters
+# - Unicode directional/formatting control characters:
+#   U+200B-200F (ZWSP, ZWNJ, ZWJ, LRM, RLM)
+#   U+202A-202E (LRE, RLE, PDF, LRO, RLO)
+#   U+2060-2069 (Word Joiner, invisible formatting)
+#   U+FEFF (BOM / ZWNBSP)
 _CONTROL_CHAR_TABLE = str.maketrans("", "", "".join(
     [chr(c) for c in range(0x20) if c not in (0x09, 0x0A, 0x0D)]
     + [chr(c) for c in range(0xE000, 0xF900)]
     + [chr(c) for c in range(0xFFF0, 0x10000)]
+    + [chr(c) for c in range(0x200B, 0x2010)]
+    + [chr(c) for c in range(0x202A, 0x202F)]
+    + [chr(c) for c in range(0x2060, 0x206A)]
+    + ["\uFEFF"]
 ))
+
+# Blog boilerplate line patterns to remove
+_BLOG_BOILERPLATE_RE = re.compile(r'^\[続き|^\.{2,}続き')
 
 # --- Filters ---
 
@@ -172,10 +186,12 @@ def main():
                     if limit > 0 and total_articles >= limit:
                         break
             else:
-                # Strip ASCII control characters (except tab) that appear
-                # in CC-100 source text — they corrupt downstream tokenization.
+                # 1. Strip control/formatting characters
                 line = line.translate(_CONTROL_CHAR_TABLE)
-                if line:
+                # 2. NFKC normalization (CJK compat → unified, halfwidth → fullwidth kana, etc.)
+                line = unicodedata.normalize('NFKC', line)
+                # 3. Skip empty lines and blog boilerplate
+                if line and not _BLOG_BOILERPLATE_RE.search(line):
                     doc_lines.append(line)
 
     # Flush last document if file doesn't end with blank line
