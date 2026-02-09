@@ -1,11 +1,13 @@
 CIRRUS_DATE ?= 20251229
 TOKENIZER_OPTS ?=
-CC100_LIMIT ?= 0
+CC100_LIMIT ?= 5000000
 
 all: work/stats-vibrato-bigram.wordcnt.trie work/vibrato-ipadic.vocab
 
+all-full: work/stats-vibrato-bigram-full.wordcnt.trie work/vibrato-ipadic-full.vocab
+
 # =========================================================================
-#  dist: 配布用 tarball の作成
+#  dist: 配布用 tarball の作成 (jawiki + 青空文庫のみ)
 # =========================================================================
 
 dist: all
@@ -16,10 +18,21 @@ dist: all
 	cp NOTICE dist/
 
 # =========================================================================
+#  dist-full: CC-100 込みの配布用 tarball の作成
+# =========================================================================
+
+dist-full: all-full
+	mkdir -p dist-full/
+	cp work/stats-vibrato-unigram-full.wordcnt.trie dist-full/stats-vibrato-unigram.wordcnt.trie
+	cp work/stats-vibrato-bigram-full.wordcnt.trie dist-full/stats-vibrato-bigram.wordcnt.trie
+	cp work/vibrato-ipadic-full.vocab dist-full/vibrato-ipadic.vocab
+	cp NOTICE dist-full/
+
+# =========================================================================
 #  release: CalVer タグ作成 + GitHub Release にアップロード
 # =========================================================================
 
-release: dist
+release: dist dist-full
 	@PREFIX="v$$(date +%Y.%m%d)"; \
 	EXISTING=$$(git tag -l "$${PREFIX}.*" | sort -t. -k3 -n | tail -1); \
 	if [ -z "$$EXISTING" ]; then \
@@ -30,11 +43,12 @@ release: dist
 	fi; \
 	echo "Creating release $$TAG ..."; \
 	tar czvf akaza-corpus-stats.tar.gz -C dist . && \
+	tar czvf akaza-corpus-stats-full.tar.gz -C dist-full . && \
 	git tag "$$TAG" && \
 	git push origin "$$TAG" && \
-	gh release create "$$TAG" akaza-corpus-stats.tar.gz \
+	gh release create "$$TAG" akaza-corpus-stats.tar.gz akaza-corpus-stats-full.tar.gz \
 		--title "$$TAG" --generate-notes && \
-	rm -f akaza-corpus-stats.tar.gz && \
+	rm -f akaza-corpus-stats.tar.gz akaza-corpus-stats-full.tar.gz && \
 	echo "Released $$TAG"
 
 # =========================================================================
@@ -111,14 +125,13 @@ work/cc100/vibrato-ipadic/_SUCCESS: mecab-user-dict.csv work/cc100/extracted/_SU
 		-vvv
 
 # =========================================================================
-#  統計データ生成
+#  統計データ生成 (jawiki + 青空文庫のみ)
 # =========================================================================
 
-work/vibrato-ipadic.wfreq: work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS work/cc100/vibrato-ipadic/_SUCCESS
+work/vibrato-ipadic.wfreq: work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS
 	akaza-data wfreq \
 		--src-dir=work/jawiki/vibrato-ipadic/ \
 		--src-dir=work/aozora_bunko/vibrato-ipadic/ \
-		--src-dir=work/cc100/vibrato-ipadic/ \
 		work/vibrato-ipadic.wfreq -vvv
 
 work/vibrato-ipadic.vocab: work/vibrato-ipadic.wfreq
@@ -129,24 +142,52 @@ work/stats-vibrato-unigram.wordcnt.trie: work/vibrato-ipadic.wfreq
 		work/vibrato-ipadic.wfreq \
 		work/stats-vibrato-unigram.wordcnt.trie -vvv
 
-work/stats-vibrato-bigram.wordcnt.trie: work/stats-vibrato-unigram.wordcnt.trie work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS work/cc100/vibrato-ipadic/_SUCCESS
+work/stats-vibrato-bigram.wordcnt.trie: work/stats-vibrato-unigram.wordcnt.trie work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS
+	mkdir -p work/dump/
+	akaza-data wordcnt-bigram --threshold=3 \
+		--corpus-dirs work/jawiki/vibrato-ipadic/ \
+		--corpus-dirs work/aozora_bunko/vibrato-ipadic/ \
+		work/stats-vibrato-unigram.wordcnt.trie work/stats-vibrato-bigram.wordcnt.trie -vvv
+
+# =========================================================================
+#  統計データ生成 -full (jawiki + 青空文庫 + CC-100)
+# =========================================================================
+
+work/vibrato-ipadic-full.wfreq: work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS work/cc100/vibrato-ipadic/_SUCCESS
+	akaza-data wfreq \
+		--src-dir=work/jawiki/vibrato-ipadic/ \
+		--src-dir=work/aozora_bunko/vibrato-ipadic/ \
+		--src-dir=work/cc100/vibrato-ipadic/ \
+		work/vibrato-ipadic-full.wfreq -vvv
+
+work/vibrato-ipadic-full.vocab: work/vibrato-ipadic-full.wfreq
+	akaza-data vocab --threshold 16 work/vibrato-ipadic-full.wfreq work/vibrato-ipadic-full.vocab -vvv
+
+work/stats-vibrato-unigram-full.wordcnt.trie: work/vibrato-ipadic-full.wfreq
+	akaza-data wordcnt-unigram \
+		work/vibrato-ipadic-full.wfreq \
+		work/stats-vibrato-unigram-full.wordcnt.trie -vvv
+
+work/stats-vibrato-bigram-full.wordcnt.trie: work/stats-vibrato-unigram-full.wordcnt.trie work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS work/cc100/vibrato-ipadic/_SUCCESS
 	mkdir -p work/dump/
 	akaza-data wordcnt-bigram --threshold=3 \
 		--corpus-dirs work/jawiki/vibrato-ipadic/ \
 		--corpus-dirs work/aozora_bunko/vibrato-ipadic/ \
 		--corpus-dirs work/cc100/vibrato-ipadic/ \
-		work/stats-vibrato-unigram.wordcnt.trie work/stats-vibrato-bigram.wordcnt.trie -vvv
+		work/stats-vibrato-unigram-full.wordcnt.trie work/stats-vibrato-bigram-full.wordcnt.trie -vvv
 
 # =========================================================================
 
 clean:
-	rm -rf dist/
+	rm -rf dist/ dist-full/
 
 # akaza-data が生成したファイル (tokenize 以降) を削除。Wikipedia 抽出結果は残す。
 clean-tokenized:
 	rm -rf work/jawiki/vibrato-ipadic/ work/aozora_bunko/vibrato-ipadic/ work/cc100/vibrato-ipadic/ \
 		work/vibrato-ipadic.wfreq work/vibrato-ipadic.vocab \
+		work/vibrato-ipadic-full.wfreq work/vibrato-ipadic-full.vocab \
 		work/stats-vibrato-unigram.wordcnt.trie work/stats-vibrato-bigram.wordcnt.trie \
-		dist/
+		work/stats-vibrato-unigram-full.wordcnt.trie work/stats-vibrato-bigram-full.wordcnt.trie \
+		dist/ dist-full/
 
-.PHONY: all dist release clean clean-tokenized
+.PHONY: all all-full dist dist-full release clean clean-tokenized

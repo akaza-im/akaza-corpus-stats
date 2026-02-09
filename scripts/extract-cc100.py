@@ -7,7 +7,7 @@ so the Akaza pipeline (``akaza-data tokenize --reader=jawiki``) can
 consume it without changes.
 
 Usage:
-    python3 scripts/extract-cc100.py [--limit N] INPUT.txt.xz OUTPUT_DIR
+    python3 scripts/extract-cc100.py [--limit N] [--no-filter] INPUT.txt.xz OUTPUT_DIR
 
 Output directory structure mirrors wikiextractor:
     OUTPUT_DIR/AA/wiki_00
@@ -21,9 +21,38 @@ import argparse
 import lzma
 import os
 import sys
+from collections import Counter
 
 # Maximum number of documents per output file
 ARTICLES_PER_FILE = 1000
+
+# Translation table to remove ASCII control characters (0x00-0x1F) except
+# TAB (0x09), LF (0x0A), CR (0x0D).  CC-100 source text occasionally
+# contains stray control bytes that corrupt downstream tokenisation.
+_CONTROL_CHAR_TABLE = str.maketrans("", "", "".join(
+    chr(c) for c in range(0x20) if c not in (0x09, 0x0A, 0x0D)
+))
+
+# --- Filters ---
+
+MIN_DOC_LENGTH = 200  # characters
+
+
+def _hiragana_ratio(text: str) -> float:
+    """Return the fraction of characters that are hiragana."""
+    if not text:
+        return 0.0
+    hiragana = sum(1 for ch in text if '\u3040' <= ch <= '\u309f')
+    return hiragana / len(text)
+
+
+def _line_repetition_ratio(lines: list[str]) -> float:
+    """Return the fraction of lines that are duplicates."""
+    if len(lines) <= 1:
+        return 0.0
+    counts = Counter(lines)
+    repeated = sum(c - 1 for c in counts.values() if c > 1)
+    return repeated / len(lines)
 
 
 def _subdir_names():
@@ -45,11 +74,26 @@ def main():
         default=0,
         help="Max number of documents to extract (0 = unlimited)",
     )
+    parser.add_argument(
+        "--no-filter",
+        action="store_true",
+        help="Disable all quality filters",
+    )
     args = parser.parse_args()
 
     input_path = args.input
     output_dir = args.output_dir
     limit = args.limit
+    apply_filters = not args.no_filter
+
+    # Filter statistics
+    stats = {
+        "total_docs": 0,
+        "filtered_short": 0,
+        "filtered_hiragana": 0,
+        "filtered_repetition": 0,
+        "accepted": 0,
+    }
 
     subdir_iter = _subdir_names()
     current_subdir = next(subdir_iter)
@@ -75,9 +119,30 @@ def main():
 
     def flush_doc(lines, doc_id):
         nonlocal total_articles, articles_in_current_file, out_file
+
         if not lines:
-            return
+            return False
+
+        stats["total_docs"] += 1
         text = "\n".join(lines)
+
+        if apply_filters:
+            # Filter 1: minimum document length
+            if len(text) < MIN_DOC_LENGTH:
+                stats["filtered_short"] += 1
+                return False
+
+            # Filter 2: hiragana ratio
+            if _hiragana_ratio(text) < 0.10:
+                stats["filtered_hiragana"] += 1
+                return False
+
+            # Filter 3: line repetition
+            if _line_repetition_ratio(lines) >= 0.30:
+                stats["filtered_repetition"] += 1
+                return False
+
+        stats["accepted"] += 1
         out_file.write(f'<doc id="{doc_id}" url="" title="cc100_{doc_id}">\n')
         out_file.write(text)
         out_file.write("\n</doc>\n")
@@ -85,6 +150,7 @@ def main():
         total_articles += 1
         if articles_in_current_file >= ARTICLES_PER_FILE:
             open_next_file()
+        return True
 
     open_next_file()
 
@@ -97,13 +163,17 @@ def main():
             if line == "":
                 # Document boundary
                 if doc_lines:
-                    flush_doc(doc_lines, doc_id)
-                    doc_id += 1
+                    if flush_doc(doc_lines, doc_id):
+                        doc_id += 1
                     doc_lines = []
                     if limit > 0 and total_articles >= limit:
                         break
             else:
-                doc_lines.append(line)
+                # Strip ASCII control characters (except tab) that appear
+                # in CC-100 source text — they corrupt downstream tokenization.
+                line = line.translate(_CONTROL_CHAR_TABLE)
+                if line:
+                    doc_lines.append(line)
 
     # Flush last document if file doesn't end with blank line
     if doc_lines and (limit == 0 or total_articles < limit):
@@ -113,6 +183,16 @@ def main():
         out_file.close()
 
     print(f"Extracted {total_articles} documents to {output_dir}", file=sys.stderr)
+    if apply_filters:
+        print(f"Filter statistics:", file=sys.stderr)
+        print(f"  Total documents seen:    {stats['total_docs']}", file=sys.stderr)
+        print(f"  Filtered (short <{MIN_DOC_LENGTH}):  {stats['filtered_short']}", file=sys.stderr)
+        print(f"  Filtered (hiragana <10%): {stats['filtered_hiragana']}", file=sys.stderr)
+        print(f"  Filtered (line repeat):   {stats['filtered_repetition']}", file=sys.stderr)
+        print(f"  Accepted:                 {stats['accepted']}", file=sys.stderr)
+        if stats['total_docs'] > 0:
+            pct = stats['accepted'] / stats['total_docs'] * 100
+            print(f"  Acceptance rate:          {pct:.1f}%", file=sys.stderr)
 
 
 if __name__ == "__main__":
