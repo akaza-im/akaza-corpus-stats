@@ -1,2 +1,4 @@
 work/
 dist/
+dist-full/
+*.tar.gz
