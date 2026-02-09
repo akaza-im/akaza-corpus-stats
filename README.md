@@ -2,16 +2,16 @@
 
 [Akaza](https://github.com/akaza-im/akaza) (Japanese kana-kanji conversion engine) 用の n-gram 統計データを生成するパイプラインです。
 
-日本語 Wikipedia および青空文庫のテキストをトーカナイズし、unigram/bigram の wordcnt trie と語彙ファイルを生成します。
+日本語 Wikipedia、青空文庫、CC-100 Japanese のテキストをトーカナイズし、unigram/bigram の wordcnt trie と語彙ファイルを生成します。
 生成物は [akaza-default-model](https://github.com/akaza-im/akaza-default-model) で `learn-corpus` の入力として使用されます。
 
 ## 生成物
 
 | ファイル | 内容 | サイズ目安 |
 |---|---|---|
-| `dist/stats-vibrato-unigram.wordcnt.trie` | Unigram wordcnt (marisa-trie) | ~6MB |
-| `dist/stats-vibrato-bigram.wordcnt.trie` | Bigram wordcnt (marisa-trie) | ~25MB |
-| `dist/vibrato-ipadic.vocab` | 語彙リスト (頻度閾値=16) | ~12MB |
+| `dist/stats-vibrato-unigram.wordcnt.trie` | Unigram wordcnt (marisa-trie) | ~28MB |
+| `dist/stats-vibrato-bigram.wordcnt.trie` | Bigram wordcnt (marisa-trie) | ~186MB |
+| `dist/vibrato-ipadic.vocab` | 語彙リスト (頻度閾値=16) | ~55MB |
 
 ## ビルド
 
@@ -42,6 +42,13 @@ make dist     # dist/ に成果物を出力
 - git submodule `aozorabunko_text` で取得
 - 著作権の消滅した日本語文学作品のテキストアーカイブ
 
+### CC-100 Japanese
+
+- URL: `https://data.statmt.org/cc-100/ja.txt.xz`
+- 形式: xz 圧縮プレーンテキスト (1 行 1 文、空行で文書区切り)
+- `scripts/extract-cc100.py` で `<doc>` 形式に変換
+- `CC100_LIMIT` 変数で処理文書数を制限可能 (デフォルト 0 = 無制限)
+
 ## ライセンス
 
 ### スクリプト・設定ファイル
@@ -54,6 +61,7 @@ make dist     # dist/ に成果物を出力
 
 - **Japanese Wikipedia**: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) (Wikimedia Foundation)
 - **青空文庫**: パブリックドメイン (著作権の消滅した作品)
+- **CC-100**: 元データは Common Crawl から抽出 ([CC-100 paper](https://aclanthology.org/2020.lrec-1.494/))
 
 Wikipedia 由来のデータを含むため、生成物の再配布には CC BY-SA 4.0 の条件が適用されます。
 

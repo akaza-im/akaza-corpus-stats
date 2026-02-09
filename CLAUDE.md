@@ -3,7 +3,7 @@
 ## Project Overview
 
 Akaza (日本語かな漢字変換エンジン) 用の n-gram 統計データを生成するパイプライン。
-日本語 Wikipedia (CirrusSearch ダンプ) と青空文庫をトーカナイズし、unigram/bigram の wordcnt trie と語彙ファイルを生成する。
+日本語 Wikipedia (CirrusSearch ダンプ)、青空文庫、CC-100 Japanese をトーカナイズし、unigram/bigram の wordcnt trie と語彙ファイルを生成する。
 
 生成物は [akaza-default-model](https://github.com/akaza-im/akaza-default-model) の `learn-corpus` で使用される。
 
@@ -33,6 +33,10 @@ Wikipedia CirrusSearch (.json.gz)
 青空文庫 (aozorabunko_text submodule)
     → akaza-data tokenize → aozora_bunko/vibrato-ipadic/
 
+CC-100 Japanese (ja.txt.xz)
+    → extract-cc100.py → extracted/ (<doc> 形式)
+    → akaza-data tokenize → cc100/vibrato-ipadic/
+
 振り分け結果
     → akaza-data wfreq → vibrato-ipadic.wfreq (corpus 抜き)
     → akaza-data vocab → vibrato-ipadic.vocab
@@ -46,6 +50,7 @@ wfreq の計算に corpus/ は含めない（akaza-default-model 側の corpus �
 
 - `Makefile` — ビルドパイプライン
 - `scripts/extract-cirrus.py` — CirrusSearch NDJSON → `<doc>` 形式変換
+- `scripts/extract-cc100.py` — CC-100 ja.txt.xz → `<doc>` 形式変換
 - `mecab-user-dict.csv` — Vibrato ユーザー辞書（akaza-default-model と同期）
 - `NOTICE` — 生成データのライセンス情報（配布 tarball に同梱）
 

@@ -1,5 +1,6 @@
 CIRRUS_DATE ?= 20251229
 TOKENIZER_OPTS ?=
+CC100_LIMIT ?= 0
 
 all: work/stats-vibrato-bigram.wordcnt.trie work/vibrato-ipadic.vocab
 
@@ -50,6 +51,20 @@ work/jawiki/extracted/_SUCCESS: work/jawiki/jawiki-cirrussearch-content.json.gz
 	touch work/jawiki/extracted/_SUCCESS
 
 # =========================================================================
+#  CC-100 Japanese
+# =========================================================================
+
+work/cc100/ja.txt.xz:
+	mkdir -p work/cc100/
+	wget --show-progress --no-clobber -O work/cc100/ja.txt.xz \
+		https://data.statmt.org/cc-100/ja.txt.xz
+
+work/cc100/extracted/_SUCCESS: work/cc100/ja.txt.xz
+	python3 scripts/extract-cc100.py --limit=$(CC100_LIMIT) \
+		work/cc100/ja.txt.xz work/cc100/extracted/
+	touch work/cc100/extracted/_SUCCESS
+
+# =========================================================================
 #  Vibrato 辞書
 # =========================================================================
 
@@ -85,14 +100,25 @@ work/aozora_bunko/vibrato-ipadic/_SUCCESS: work/vibrato/ipadic-mecab-2_7_0/syste
 		aozorabunko_text/cards/ \
 		work/aozora_bunko/vibrato-ipadic/ -vv
 
+work/cc100/vibrato-ipadic/_SUCCESS: mecab-user-dict.csv work/cc100/extracted/_SUCCESS work/vibrato/ipadic-mecab-2_7_0/system.dic
+	akaza-data tokenize \
+		--reader=jawiki \
+		--user-dict=mecab-user-dict.csv \
+		--system-dict=work/vibrato/ipadic-mecab-2_7_0/system.dic \
+		$(TOKENIZER_OPTS) \
+		work/cc100/extracted \
+		work/cc100/vibrato-ipadic/ \
+		-vvv
+
 # =========================================================================
 #  統計データ生成
 # =========================================================================
 
-work/vibrato-ipadic.wfreq: work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS
+work/vibrato-ipadic.wfreq: work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS work/cc100/vibrato-ipadic/_SUCCESS
 	akaza-data wfreq \
 		--src-dir=work/jawiki/vibrato-ipadic/ \
 		--src-dir=work/aozora_bunko/vibrato-ipadic/ \
+		--src-dir=work/cc100/vibrato-ipadic/ \
 		work/vibrato-ipadic.wfreq -vvv
 
 work/vibrato-ipadic.vocab: work/vibrato-ipadic.wfreq
@@ -101,14 +127,15 @@ work/vibrato-ipadic.vocab: work/vibrato-ipadic.wfreq
 work/stats-vibrato-unigram.wordcnt.trie: work/vibrato-ipadic.wfreq
 	akaza-data wordcnt-unigram \
 		work/vibrato-ipadic.wfreq \
-		work/stats-vibrato-unigram.wordcnt.trie
+		work/stats-vibrato-unigram.wordcnt.trie -vvv
 
-work/stats-vibrato-bigram.wordcnt.trie: work/stats-vibrato-unigram.wordcnt.trie work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS
+work/stats-vibrato-bigram.wordcnt.trie: work/stats-vibrato-unigram.wordcnt.trie work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS work/cc100/vibrato-ipadic/_SUCCESS
 	mkdir -p work/dump/
 	akaza-data wordcnt-bigram --threshold=3 \
 		--corpus-dirs work/jawiki/vibrato-ipadic/ \
 		--corpus-dirs work/aozora_bunko/vibrato-ipadic/ \
-		work/stats-vibrato-unigram.wordcnt.trie work/stats-vibrato-bigram.wordcnt.trie
+		--corpus-dirs work/cc100/vibrato-ipadic/ \
+		work/stats-vibrato-unigram.wordcnt.trie work/stats-vibrato-bigram.wordcnt.trie -vvv
 
 # =========================================================================
 
@@ -117,7 +144,7 @@ clean:
 
 # akaza-data が生成したファイル (tokenize 以降) を削除。Wikipedia 抽出結果は残す。
 clean-tokenized:
-	rm -rf work/jawiki/vibrato-ipadic/ work/aozora_bunko/vibrato-ipadic/ \
+	rm -rf work/jawiki/vibrato-ipadic/ work/aozora_bunko/vibrato-ipadic/ work/cc100/vibrato-ipadic/ \
 		work/vibrato-ipadic.wfreq work/vibrato-ipadic.vocab \
 		work/stats-vibrato-unigram.wordcnt.trie work/stats-vibrato-bigram.wordcnt.trie \
 		dist/
