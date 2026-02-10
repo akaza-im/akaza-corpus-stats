@@ -1,6 +1,7 @@
 CIRRUS_DATE ?= 20251229
 TOKENIZER_OPTS ?=
 CC100_LIMIT ?= 5000000
+CC100_WEIGHT ?= 0.3
 
 all: work/stats-vibrato-bigram.wordcnt.trie work/vibrato-ipadic.vocab
 
@@ -157,7 +158,7 @@ work/vibrato-ipadic-full.wfreq: work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_
 	akaza-data wfreq \
 		--src-dir=work/jawiki/vibrato-ipadic/ \
 		--src-dir=work/aozora_bunko/vibrato-ipadic/ \
-		--src-dir=work/cc100/vibrato-ipadic/ \
+		--src-dir=work/cc100/vibrato-ipadic/:$(CC100_WEIGHT) \
 		work/vibrato-ipadic-full.wfreq -vvv
 
 work/vibrato-ipadic-full.vocab: work/vibrato-ipadic-full.wfreq
@@ -173,7 +174,7 @@ work/stats-vibrato-bigram-full.wordcnt.trie: work/stats-vibrato-unigram-full.wor
 	akaza-data wordcnt-bigram --threshold=3 \
 		--corpus-dirs work/jawiki/vibrato-ipadic/ \
 		--corpus-dirs work/aozora_bunko/vibrato-ipadic/ \
-		--corpus-dirs work/cc100/vibrato-ipadic/ \
+		--corpus-dirs work/cc100/vibrato-ipadic/:$(CC100_WEIGHT) \
 		work/stats-vibrato-unigram-full.wordcnt.trie work/stats-vibrato-bigram-full.wordcnt.trie -vvv
 
 # =========================================================================
