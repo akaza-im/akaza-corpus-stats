@@ -17,7 +17,7 @@
 
 ### 前提
 
-- `akaza-data` (Rust): `cargo install --git https://github.com/akaza-im/akaza.git akaza-data`
+- `akaza-data` (Rust): `make install-akaza-data` (Makefile の `AKAZA_REV` でハッシュ固定)
 - `wget`, `unzip`, `zstd`
 - Python 3 (標準ライブラリのみ使用)
 - git submodule の初期化: `git submodule update --init`

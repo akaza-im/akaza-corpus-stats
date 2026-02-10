@@ -12,8 +12,8 @@ Akaza (日本語かな漢字変換エンジン) 用の n-gram 統計データを
 ## Build Commands
 
 ```bash
-# 前提: akaza-data のインストール
-cargo install --git https://github.com/akaza-im/akaza.git akaza-data
+# 前提: akaza-data のインストール (AKAZA_REV でハッシュ固定)
+make install-akaza-data
 
 # git submodule の初期化 (青空文庫テキスト)
 git submodule update --init
@@ -38,6 +38,7 @@ make clean-tokenized   # tokenize 以降の中間ファイルを削除 (抽出�
 
 ### Makefile 変数
 
+- `AKAZA_REV`: akaza リポジトリのコミットハッシュ (`make install-akaza-data` で使用)
 - `CIRRUS_DATE`: Wikipedia ダンプの日付 (デフォルト: `20251229`)
 - `CC100_LIMIT`: CC-100 の処理文書数上限 (デフォルト: `5000000`、`0` で無制限)
 - `TOKENIZER_OPTS`: `akaza-data tokenize` への追加オプション

@@ -2,8 +2,16 @@ CIRRUS_DATE ?= 20251229
 TOKENIZER_OPTS ?=
 CC100_LIMIT ?= 5000000
 CC100_WEIGHT ?= 0.3
+AKAZA_REV ?= 16c3d0fef8889d187d3364b7a200d3ce78a084ad
 
 all: work/stats-vibrato-bigram.wordcnt.trie work/vibrato-ipadic.vocab
+
+# =========================================================================
+#  akaza-data のインストール (ハッシュ固定)
+# =========================================================================
+
+install-akaza-data:
+	cargo install --git https://github.com/akaza-im/akaza.git --rev $(AKAZA_REV) akaza-data
 
 all-full: work/stats-vibrato-bigram-full.wordcnt.trie work/vibrato-ipadic-full.vocab
 
@@ -191,4 +199,4 @@ clean-tokenized:
 		work/stats-vibrato-unigram-full.wordcnt.trie work/stats-vibrato-bigram-full.wordcnt.trie \
 		dist/ dist-full/
 
-.PHONY: all all-full dist dist-full release clean clean-tokenized
+.PHONY: all all-full dist dist-full release clean clean-tokenized install-akaza-data
