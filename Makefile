@@ -3,9 +3,9 @@ TOKENIZER_OPTS ?=
 CC100_LIMIT ?= 5000000
 CC100_WEIGHT ?= 0.3
 
-all: work/stats-vibrato-bigram.wordcnt.trie work/vibrato-ipadic.vocab
+all: work/stats-vibrato-bigram.wordcnt.trie work/stats-vibrato-skip-bigram.wordcnt.trie work/vibrato-ipadic.vocab
 
-all-full: work/stats-vibrato-bigram-full.wordcnt.trie work/vibrato-ipadic-full.vocab
+all-full: work/stats-vibrato-bigram-full.wordcnt.trie work/stats-vibrato-skip-bigram-full.wordcnt.trie work/vibrato-ipadic-full.vocab
 
 # =========================================================================
 #  dist: 配布用 tarball の作成 (jawiki + 青空文庫のみ)
@@ -15,6 +15,7 @@ dist: all
 	mkdir -p dist/
 	cp work/stats-vibrato-unigram.wordcnt.trie dist/
 	cp work/stats-vibrato-bigram.wordcnt.trie dist/
+	cp work/stats-vibrato-skip-bigram.wordcnt.trie dist/
 	cp work/vibrato-ipadic.vocab dist/
 	cp NOTICE dist/
 
@@ -26,6 +27,7 @@ dist-full: all-full
 	mkdir -p dist-full/
 	cp work/stats-vibrato-unigram-full.wordcnt.trie dist-full/stats-vibrato-unigram.wordcnt.trie
 	cp work/stats-vibrato-bigram-full.wordcnt.trie dist-full/stats-vibrato-bigram.wordcnt.trie
+	cp work/stats-vibrato-skip-bigram-full.wordcnt.trie dist-full/stats-vibrato-skip-bigram.wordcnt.trie
 	cp work/vibrato-ipadic-full.vocab dist-full/vibrato-ipadic.vocab
 	cp NOTICE dist-full/
 
@@ -150,6 +152,12 @@ work/stats-vibrato-bigram.wordcnt.trie: work/stats-vibrato-unigram.wordcnt.trie 
 		--corpus-dirs work/aozora_bunko/vibrato-ipadic/ \
 		work/stats-vibrato-unigram.wordcnt.trie work/stats-vibrato-bigram.wordcnt.trie -vvv
 
+work/stats-vibrato-skip-bigram.wordcnt.trie: work/stats-vibrato-unigram.wordcnt.trie work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS
+	akaza-data wordcnt-skip-bigram --threshold=3 \
+		--corpus-dirs work/jawiki/vibrato-ipadic/ \
+		--corpus-dirs work/aozora_bunko/vibrato-ipadic/ \
+		work/stats-vibrato-unigram.wordcnt.trie work/stats-vibrato-skip-bigram.wordcnt.trie -vvv
+
 # =========================================================================
 #  統計データ生成 -full (jawiki + 青空文庫 + CC-100)
 # =========================================================================
@@ -177,6 +185,13 @@ work/stats-vibrato-bigram-full.wordcnt.trie: work/stats-vibrato-unigram-full.wor
 		--corpus-dirs work/cc100/vibrato-ipadic/:$(CC100_WEIGHT) \
 		work/stats-vibrato-unigram-full.wordcnt.trie work/stats-vibrato-bigram-full.wordcnt.trie -vvv
 
+work/stats-vibrato-skip-bigram-full.wordcnt.trie: work/stats-vibrato-unigram-full.wordcnt.trie work/jawiki/vibrato-ipadic/_SUCCESS work/aozora_bunko/vibrato-ipadic/_SUCCESS work/cc100/vibrato-ipadic/_SUCCESS
+	akaza-data wordcnt-skip-bigram --threshold=3 \
+		--corpus-dirs work/jawiki/vibrato-ipadic/ \
+		--corpus-dirs work/aozora_bunko/vibrato-ipadic/ \
+		--corpus-dirs work/cc100/vibrato-ipadic/:$(CC100_WEIGHT) \
+		work/stats-vibrato-unigram-full.wordcnt.trie work/stats-vibrato-skip-bigram-full.wordcnt.trie -vvv
+
 # =========================================================================
 
 clean:
@@ -188,7 +203,9 @@ clean-tokenized:
 		work/vibrato-ipadic.wfreq work/vibrato-ipadic.vocab \
 		work/vibrato-ipadic-full.wfreq work/vibrato-ipadic-full.vocab \
 		work/stats-vibrato-unigram.wordcnt.trie work/stats-vibrato-bigram.wordcnt.trie \
+		work/stats-vibrato-skip-bigram.wordcnt.trie \
 		work/stats-vibrato-unigram-full.wordcnt.trie work/stats-vibrato-bigram-full.wordcnt.trie \
+		work/stats-vibrato-skip-bigram-full.wordcnt.trie \
 		dist/ dist-full/
 
 .PHONY: all all-full dist dist-full release clean clean-tokenized
